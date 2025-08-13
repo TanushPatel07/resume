@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Printers - Job Slip / Estimate / Quotation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .input-group { margin-bottom: 1rem; }
+        .input-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
+        .form-input, .form-select { width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; background-color: #F9FAFB; transition: border-color 0.2s; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #3B82F6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+        .summary-card { background-color: #ffffff; border: 1px solid #E5E7EB; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .total-line { margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #E5E7EB; }
+        .total-value { font-size: 2rem; font-weight: 700; color: #16A34A; }
+        .balance-value { font-size: 1.5rem; font-weight: 700; color: #EF4444; }
+        .btn { width: 100%; margin-top: 0.5rem; padding: 0.875rem; color: white; font-weight: 600; border-radius: 0.5rem; border: none; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-print { background-color: #10B981; } .btn-print:hover { background-color: #059669; }
+        .btn-add { background-color: #3B82F6; } .btn-add:hover { background-color: #2563EB; }
+        .btn-toggle { background-color: #6b7280; } .btn-toggle:hover { background-color: #4b5563; }
+        .product-card { position: relative; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; }
+        .btn-remove { position: absolute; top: 0.5rem; right: 0.5rem; background: #ef4444; color: white; border-radius: 9999px; width: 1.5rem; height: 1.5rem; border: none; cursor: pointer; font-weight: bold; line-height: 1.5rem; text-align: center; }
+        .btn-remove:hover { background: #dc2626; }
+        .duplicate-section { border-top: 1px dashed #e5e7eb; padding-top: 1rem; margin-top: 1rem; }
+        .editable-total { border: 2px dashed #3B82F6; padding: 0.5rem; border-radius: 0.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AR PRINTERS</h1>
+            <p class="text-lg text-gray-600 mt-1">Job Slip / Estimate / Quotation</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Input Form Column -->
+            <div id="form-column" class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                     <h2 class="text-xl font-semibold mb-4 border-b pb-2">Client Details</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="input-group"><label for="jobNumber" class="input-label">Job Number</label><input type="text" id="jobNumber" class="form-input"></div>
+                        <div class="input-group"><label for="consumerName" class="input-label">Consumer's Name</label><input type="text" id="consumerName" class="form-input" placeholder="Enter name"></div>
+                        <div class="input-group"><label for="consumerNumber" class="input-label">Consumer's Number</label><input type="text" id="consumerNumber" class="form-input" placeholder="Enter number"></div>
+                    </div>
+                </div>
+                <div id="product-list"></div>
+                <button id="add-product-btn" class="btn btn-add">Add Another Product</button>
+            </div>
+
+            <!-- Calculation Summary Column -->
+            <div class="lg:col-span-1">
+                <div class="summary-card h-fit sticky top-8">
+                    <h2 class="text-xl font-semibold mb-4">Estimate Summary</h2>
+                    <div class="input-group"><label for="margin" class="input-label">Profit Margin (on Bill Books & Pamphlets, %)</label><input type="number" id="margin" class="form-input" value="50"></div>
+                    <div class="total-line flex justify-between items-center">
+                        <span class="text-xl font-bold">Grand Total</span>
+                        <div class="flex items-center gap-2">
+                            <span id="totalPrice" class="total-value">₹0.00</span>
+                            <button id="edit-total-btn" title="Edit Final Price" class="p-1 rounded-full hover:bg-gray-200"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                        </div>
+                    </div>
+                    <div class="input-group mt-4"><label for="advanceAmount" class="input-label">Advance Amount (₹)</label><input type="number" id="advanceAmount" class="form-input" value="0"></div>
+                    <div class="flex justify-between items-center mt-2"><span class="text-xl font-bold">Balance Due</span><span id="balanceAmount" class="balance-value">₹0.00</span></div>
+                    <button id="toggle-prices-btn" class="btn btn-toggle">Unlock Product Prices</button>
+                    <button id="btnPrint" class="btn btn-print">Print Quotation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const bindingCosts = { 3: 40, 4: 30, 5: 25, 6: 22, 8: 18, 10: 14, 12: 14, 16: 12 };
+        const printingBaseCost = { customer: 150, agent: 90 };
+        const visitingCardRates = {
+            '1000': {'250 gsm single side glossy lamination': 600, '250 gsm both side glossy lamination': 900,'300 gsm single side glossy lamination': 900, '300 gsm both side glossy lamination': 1200,'370 gsm single side matt lamination': 1350, '370 gsm both side matt lamination': 1750,'450 gsm single side matt lamination': 1850, '450 gsm both side matt lamination': 2000,'370 gsm single spot + matt lamination': 1800, '370 gsm both spot + matt lamination': 2500,'450 gsm single side spot+matt lamination': 2050, '450 gsm both side spot+matt lamination': 2800,'370 gsm silver/gold foiling + spot single side other side matt lamination': 4000},
+            '500': {'300 gsm single side without lamination': 900, '300 gsm both side without lamination': 1200,'370 gsm single side matt lamination': 1050, '370 gsm both side matt lamination': 1350,'450 gsm single side matt lamination': 1450, '450 gsm both side matt lamination': 1700,'370 gsm single spot + matt lamination': 1350, '370 gsm both spot + matt lamination': 1800,'450 gsm single side spot+matt lamination': 1750, '450 gsm both side spot+matt lamination': 2200},
+            '300': {'300 gsm single side without lamination': 650, '300 gsm both side without lamination': 900,'370 gsm single side matt lamination': 850, '370 gsm both side matt lamination': 1050,'450 gsm single side matt lamination': 950, '450 gsm both side matt lamination': 1200,'370 gsm single spot + matt lamination': 1350, '450 gsm single side spot+matt lamination': 1550,'370 gsm silver/gold foiling + spot single side other side matt lamination': 2000},
+            '200': {
+                '300 gsm single side without lamination': 450, 
+                '300 gsm both side without lamination': 600,
+                '350 gsm single side matt lamination': 650,
+                '350 gsm both side matt lamination': 850,
+                '350 gsm single spot + matt lamination': 1050, 
+                '350 gsm silver/gold foiling + spot single side other side matt lamination': 1200
+            },
+            '100': {
+                '300 gsm single side without lamination': 300, 
+                '300 gsm both side without lamination': 350,
+                '350 gsm single side matt lamination': 500, 
+                '350 gsm both side matt lamination': 650,
+                '350 gsm single spot + matt lamination': 750,
+                '350 gsm silver/gold foiling + spot single side other side matt lamination': 750
+            }
+        };
+        const flexRates = {
+            sqft: { 'Normal': 10, 'Star': 20, 'Black-Back': 15, 'Normal Frame': 50, 'Star Frame': 60, 'Glow-shine Board': 210 },
+            fixed: {
+                'Normal': {'3x2': 150, '4x2': 200, '5x2': 230, '6x2': 250, '7x2': 300, '4x3': 250, '5x3': 300, '6x3': 350, '7x3': 400},
+                'Star': {'3x2': 200, '4x2': 250, '5x2': 250, '6x2': 300, '7x2': 320, '4x3': 300, '5x3': 350, '6x3': 450, '7x3': 500},
+                'Black-Back': {'3x2': 200, '4x2': 250, '5x2': 250, '6x2': 280, '7x2': 300, '4x3': 280, '5x3': 320, '6x3': 400, '7x3': 450},
+                'Normal Frame': {'3x2': 350, '4x2': 400},
+                'Star Frame': {'3x2': 450, '4x2': 500}
+            },
+            pcs: { 'Roll Up Standee 6x3': 1500 }
+        };
+        const letterHeadRates = {
+            '1000 pc A4 Bond Paper (100gsm)': 2200,
+            '1000 pc A4 100gsm': 2100,
+            '500 pc A4 Bond Paper (100gsm)': 2000
+        };
+        const posterRates = {
+            '300 gsm 12x18': { 10: 40, 20: 30, 200: 20 },
+            '350 gsm 12x18': { 10: 35, 20: 25, 200: 18 },
+            '170 gsm 12x18 glossy paper': { 10: 30, 20: 25, 200: 16 },
+            'Sticker Sheet': { 5: 40, 20: 30, 50: 25 }
+        };
+        const pamphletPaperRates = { '90 Art paper': 2.9, '130 gsm paper': 3.5, '170 gsm paper': 4.5, '250 gsm paper': 7.5, '300 gsm paper': 8.7, '70 gsm Maplito': 1.9, '80 gsm maplito': 2.3, '100 gsm maplito': 3.0, 'Exclusive Bond paper': 3.6 };
+        let productCounter = 0;
+        let grandTotal = 0;
+        let isTotalEditable = false;
+        let pricesUnlocked = false;
+
+        // --- DOM ELEMENTS ---
+        const elements = {
+            consumerName: document.getElementById('consumerName'), consumerNumber: document.getElementById('consumerNumber'),
+            margin: document.getElementById('margin'), totalPrice: document.getElementById('totalPrice'),
+            advanceAmount: document.getElementById('advanceAmount'), balanceAmount: document.getElementById('balanceAmount'),
+            btnPrint: document.getElementById('btnPrint'), addProductBtn: document.getElementById('add-product-btn'),
+            productList: document.getElementById('product-list'), editTotalBtn: document.getElementById('edit-total-btn'),
+            jobNumber: document.getElementById('jobNumber'), togglePricesBtn: document.getElementById('toggle-prices-btn'),
+        };
+
+        // --- HTML TEMPLATES ---
+        function createProductContainerHtml(id) { return `<div class="product-card" data-id="${id}" data-type="none"><button class="btn-remove" data-id="${id}" title="Remove Product">&times;</button><div class="grid grid-cols-1 md:grid-cols-2 items-end"><div class="input-group"><label for="productType-${id}" class="input-label">Product Type</label><select id="productType-${id}" class="form-select product-type-selector" data-id="${id}"><option value="none" selected>-- Select a Product --</option><option value="billbook">Bill Book</option><option value="visitingcard">Visiting Card</option><option value="flex">Flex / Banner</option><option value="mug">Mug</option><option value="letterhead">Letter Head</option><option value="poster">Poster</option><option value="seal">Seal / Stump</option><option value="pamphlet">Pamphlet</option><option value="custom">Customized Product</option></select></div><h2 id="product-title-${id}" class="text-xl font-semibold mb-4 pl-4"></h2></div><div id="product-form-${id}"></div></div>`; }
+        function createBillBookHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="bookSize-${id}" class="input-label">Book Size</label><select id="bookSize-${id}" class="form-select"><option value="8" selected>1/8</option><option value="3">1/3</option><option value="4">1/4</option><option value="5">1/5</option><option value="6">1/6</option><option value="10">1/10</option><option value="12">1/12</option><option value="16">1/16</option></select></div><div class="input-group"><label for="numBooks-${id}" class="input-label">Number of Books</label><input type="number" id="numBooks-${id}" class="form-input" value="10"></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="serialNo-${id}" class="input-label">Starting Serial No.</label><input type="text" id="serialNo-${id}" class="form-input" placeholder="e.g., 001"></div><div class="input-group"><label for="bindingType-${id}" class="input-label">Binding Type</label><select id="bindingType-${id}" class="form-select"><option>Toot Binding</option><option>Glue Pad Binding</option></select></div></div><div id="glue-binding-price-container-${id}" class="hidden"><div class="input-group"><label for="glueBindingPrice-${id}" class="input-label">Glue Pad Binding Price (₹)</label><input type="number" id="glueBindingPrice-${id}" class="form-input" value="0"></div></div><h3 class="text-lg font-semibold mt-4 mb-3 border-b pb-2">Pages & Paper</h3><div class="input-group"><label for="originalPagesPerBook-${id}" class="input-label">Original Pages/Book</label><input type="number" id="originalPagesPerBook-${id}" class="form-input" value="100"></div><div class="input-group"><label for="originalPaper-${id}" class="input-label">Original Paper</label><select id="originalPaper-${id}" class="form-select"><option value="1.9" selected>70 gsm</option><option value="3.0">100 gsm</option><option value="2.3">80 gsm</option><option value="1.6">65 gsm (white)</option><option value="1.7">65 gsm (Pink)</option><option value="1.7">65 gsm (Yellow)</option><option value="1.7">65 gsm (Green)</option><option value="1.7">65 gsm (Blue)</option><option value="1.2">Hanuman (white)</option><option value="1.2">Hanuman (Pink)</option><option value="1.2">Hanuman (Yellow)</option><option value="1.2">Hanuman (Green)</option><option value="1.2">Hanuman (Blue)</option></select></div><h3 class="text-lg font-semibold mt-4 mb-3 border-b pb-2">Duplicate Copies</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="numDuplicates-${id}" class="input-label">No. of Duplicates</label><input type="number" id="numDuplicates-${id}" class="form-input" value="1" min="0"></div><div class="input-group"><label for="duplicatePagesPerBook-${id}" class="input-label">Pages per Duplicate</label><input type="number" id="duplicatePagesPerBook-${id}" class="form-input" value="100"></div></div><div id="duplicate-sections-${id}" class="space-y-4"></div><h3 class="text-lg font-semibold mt-4 mb-3 border-b pb-2">Printing</h3><div class="input-group"><label for="customerType-${id}" class="input-label">Rate Type</label><select id="customerType-${id}" class="form-select"><option value="customer">Customer</option><option value="agent">Agent</option></select></div><div class="input-group"><label for="printColor-${id}" class="input-label">Color Type</label><select id="printColor-${id}" class="form-select"><option value="single">Single Color</option><option value="double">Double Color</option><option value="multi">Multi Color</option></select></div><div id="colorInputs-${id}" class="space-y-2"></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createVisitingCardHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="vcQuantity-${id}" class="input-label">Quantity</label><select id="vcQuantity-${id}" class="form-select vc-quantity-selector" data-id="${id}"><option value="1000">1000</option><option value="500">500</option><option value="300">300</option><option value="200">200</option><option value="100">100</option></select></div><div class="input-group"><label for="vcSpec-${id}" class="input-label">Specification</label><select id="vcSpec-${id}" class="form-select vc-spec-selector"></select></div></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createFlexBannerHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="flexType-${id}" class="input-label">Flex Type</label><select id="flexType-${id}" class="form-select"><option>Normal</option><option>Star</option><option>Black-Back</option><option>Normal Frame</option><option>Star Frame</option><option>Glow-shine Board</option><option>Roll Up Standee 6x3</option></select></div><div class="input-group"><label for="flexQty-${id}" class="input-label">Quantity</label><input type="number" id="flexQty-${id}" class="form-input" value="1"></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div class="input-group"><label for="flexWidth-${id}" class="input-label">Width (ft)</label><input type="number" id="flexWidth-${id}" class="form-input" value="3"></div><div class="input-group"><label for="flexHeight-${id}" class="input-label">Height (ft)</label><input type="number" id="flexHeight-${id}" class="form-input" value="2"></div><div class="input-group"><label for="flexOrientation-${id}" class="input-label">Orientation</label><select id="flexOrientation-${id}" class="form-select"><option>Portrait</option><option>Landscape</option></select></div></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createCustomProductHtml(id) { return `<div class="input-group"><label for="customDesc-${id}" class="input-label">Product Description</label><textarea id="customDesc-${id}" class="form-input" rows="3" placeholder="Enter all details here..."></textarea></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="customQty-${id}" class="input-label">Quantity</label><input type="number" id="customQty-${id}" class="form-input" value="1"></div><div class="input-group"><label for="customPrice-${id}" class="input-label">Price per Item (₹)</label><input type="number" id="customPrice-${id}" class="form-input" value="0"></div></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createMugHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="mugType-${id}" class="input-label">Mug Type</label><select id="mugType-${id}" class="form-select"><option>White Sublimation Mug</option><option>Black Base Mug</option><option>Magic Mug</option><option>4 Set Tea Mug</option><option>Base Color Mug</option></select></div><div class="input-group"><label for="mugQty-${id}" class="input-label">Quantity</label><input type="number" id="mugQty-${id}" class="form-input" value="1"></div></div><div class="input-group"><label for="mugPrice-${id}" class="input-label">Price per Item (₹)</label><input type="number" id="mugPrice-${id}" class="form-input" value="250" disabled><p id="mug-price-note-${id}" class="text-xs text-gray-500 mt-1">Price is auto-calculated for this mug type.</p></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createLetterHeadHtml(id) { return `<div class="input-group"><label for="lhSpec-${id}" class="input-label">Specification</label><select id="lhSpec-${id}" class="form-select">${Object.entries(letterHeadRates).map(([spec, price]) => `<option value="${price}">${spec}</option>`).join('')}</select></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createPosterHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="posterSpec-${id}" class="input-label">Paper Type</label><select id="posterSpec-${id}" class="form-select">${Object.keys(posterRates).map(spec => `<option>${spec}</option>`).join('')}</select></div><div class="input-group"><label for="posterQty-${id}" class="input-label">Quantity</label><input type="number" id="posterQty-${id}" class="form-input" value="1"></div></div><div class="input-group"><label for="posterPrice-${id}" class="input-label">Price per Item (₹)</label><input type="number" id="posterPrice-${id}" class="form-input" value="0" disabled><p class="text-xs text-gray-500 mt-1">Price is auto-calculated.</p></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createSealHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="sealType-${id}" class="input-label">Type</label><select id="sealType-${id}" class="form-select"><option value="100">Rubber Stump</option><option value="200">Self-ink Stump</option></select></div><div class="input-group"><label for="sealQty-${id}" class="input-label">Quantity</label><input type="number" id="sealQty-${id}" class="form-input" value="1"></div></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createPamphletHtml(id) { return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="pamphletQty-${id}" class="input-label">Quantity</label><input type="number" id="pamphletQty-${id}" class="form-input" value="1000"></div><div class="input-group"><label for="pamphletSize-${id}" class="input-label">Size</label><select id="pamphletSize-${id}" class="form-select"><option value="4">1/4</option><option value="8">1/8</option></select></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="pamphletPaper-${id}" class="input-label">Paper Quality</label><select id="pamphletPaper-${id}" class="form-select">${Object.keys(pamphletPaperRates).map(spec => `<option value="${pamphletPaperRates[spec]}">${spec}</option>`).join('')}</select></div><div class="input-group"><label for="pamphletSides-${id}" class="input-label">Printing Sides</label><select id="pamphletSides-${id}" class="form-select"><option value="1">Single Side</option><option value="2">Double Side</option></select></div></div><div class="input-group mt-4 border-t pt-4"><label for="productTotal-${id}" class="input-label">Product Total (₹)</label><input type="number" id="productTotal-${id}" class="form-input font-bold text-lg text-right product-total-input" disabled></div>`; }
+        function createDuplicateHtml(productId, duplicateId) { return `<div class="duplicate-section"><h4 class="font-semibold text-md text-gray-800 mb-2">Duplicate Copy ${duplicateId}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="duplicatePaper-${productId}-${duplicateId}" class="input-label text-sm">Paper</label><select id="duplicatePaper-${productId}-${duplicateId}" class="form-select dynamic-input"><option value="1.2" selected>Hanuman (white)</option><option value="3.0">100 gsm</option><option value="2.3">80 gsm</option><option value="1.9">70 gsm</option><option value="1.6">65 gsm (white)</option><option value="1.7">65 gsm (Pink)</option><option value="1.7">65 gsm (Yellow)</option><option value="1.7">65 gsm (Green)</option><option value="1.7">65 gsm (Blue)</option><option value="1.2">Hanuman (Pink)</option><option value="1.2">Hanuman (Yellow)</option><option value="1.2">Hanuman (Green)</option><option value="1.2">Hanuman (Blue)</option></select></div><div class="input-group flex items-end pb-1"><label class="flex items-center"><input type="checkbox" id="printDuplicate-${productId}-${duplicateId}" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dynamic-input"><span class="ml-2 text-gray-700 font-medium">Print?</span></label></div></div></div>`; }
+
+        // --- CORE LOGIC ---
+        function calculateAll() {
+            if (isTotalEditable) return;
+            let runningTotal = 0;
+            document.querySelectorAll('.product-card').forEach(card => {
+                const id = card.dataset.id;
+                const type = card.dataset.type;
+                let productFinalPrice = 0;
+
+                if (type === 'billbook') {
+                    const customerTypeEl = document.getElementById(`customerType-${id}`);
+                    if (!customerTypeEl) return; // Guard clause
+                    
+                    const customerType = customerTypeEl.value;
+                    const bookSize = parseInt(document.getElementById(`bookSize-${id}`).value);
+                    const numBooks = parseInt(document.getElementById(`numBooks-${id}`).value) || 0;
+                    const originalPagesPerBook = parseInt(document.getElementById(`originalPagesPerBook-${id}`).value) || 0;
+                    const originalPaperCostPerDemie = parseFloat(document.getElementById(`originalPaper-${id}`).value);
+                    const numDuplicates = parseInt(document.getElementById(`numDuplicates-${id}`).value) || 0;
+                    const duplicatePagesPerBook = parseInt(document.getElementById(`duplicatePagesPerBook-${id}`).value) || 0;
+                    let productPaperCost = 0, productPagesToPrint = 0;
+                    const totalOriginalPages = numBooks * originalPagesPerBook;
+                    if (totalOriginalPages > 0 && bookSize > 0) { productPagesToPrint += totalOriginalPages; productPaperCost += (totalOriginalPages / bookSize) * originalPaperCostPerDemie; }
+                    for (let i = 1; i <= numDuplicates; i++) {
+                        const paperEl = document.getElementById(`duplicatePaper-${id}-${i}`);
+                        const printEl = document.getElementById(`printDuplicate-${id}-${i}`);
+                        if (paperEl) {
+                            const totalDuplicatePages = numBooks * duplicatePagesPerBook;
+                            if (totalDuplicatePages > 0 && bookSize > 0) { productPaperCost += (totalDuplicatePages / bookSize) * parseFloat(paperEl.value); if (printEl && printEl.checked) productPagesToPrint += totalDuplicatePages; }
+                        }
+                    }
+                    
+                    let productBindingCost = 0;
+                    const bindingType = document.getElementById(`bindingType-${id}`).value;
+                    if (bindingType === 'Toot Binding') {
+                        productBindingCost = numBooks * (bindingCosts[bookSize] || 0);
+                    } else { // Glue Pad Binding
+                        productBindingCost = parseFloat(document.getElementById(`glueBindingPrice-${id}`).value) || 0;
+                    }
+
+                    let productPrintingCost = 0;
+                    if (productPagesToPrint > 0) { 
+                        const baseCost = printingBaseCost[customerType]; 
+                        const thousandsBlocks = Math.ceil(productPagesToPrint / 1000); 
+                        productPrintingCost = thousandsBlocks * baseCost;
+                    }
+                    const totalProductionCost = productPaperCost + productBindingCost + productPrintingCost;
+                    const marginPercent = parseFloat(elements.margin.value) || 0;
+                    const marginAmount = totalProductionCost * (marginPercent / 100);
+                    productFinalPrice = totalProductionCost + marginAmount;
+                } else if (type === 'visitingcard') {
+                    const specEl = document.getElementById(`vcSpec-${id}`);
+                    if (specEl) productFinalPrice = parseFloat(specEl.value) || 0;
+                } else if (type === 'flex') {
+                    const flexType = document.getElementById(`flexType-${id}`).value;
+                    const width = parseFloat(document.getElementById(`flexWidth-${id}`).value) || 0;
+                    const height = parseFloat(document.getElementById(`flexHeight-${id}`).value) || 0;
+                    const qty = parseInt(document.getElementById(`flexQty-${id}`).value) || 1;
+                    const sizeKey1 = `${width}x${height}`;
+                    const sizeKey2 = `${height}x${width}`;
+                    const area = width * height;
+                    if (flexRates.pcs[flexType]) { productFinalPrice = (flexRates.pcs[flexType] || 0) * qty; } 
+                    else if (flexRates.fixed[flexType] && (flexRates.fixed[flexType][sizeKey1] || flexRates.fixed[flexType][sizeKey2])) { 
+                        const price = flexRates.fixed[flexType][sizeKey1] || flexRates.fixed[flexType][sizeKey2];
+                        productFinalPrice = (price || 0) * qty;
+                    } 
+                    else if (flexRates.sqft[flexType]) { productFinalPrice = Math.max(area, 6) * (flexRates.sqft[flexType] || 0) * qty; }
+                } else if (type === 'custom') {
+                    const price = parseFloat(document.getElementById(`customPrice-${id}`).value) || 0;
+                    const qty = parseInt(document.getElementById(`customQty-${id}`).value) || 1;
+                    productFinalPrice = price * qty;
+                } else if (type === 'mug') {
+                    const price = parseFloat(document.getElementById(`mugPrice-${id}`).value) || 0;
+                    const qty = parseInt(document.getElementById(`mugQty-${id}`).value) || 1;
+                    productFinalPrice = price * qty;
+                } else if (type === 'letterhead') {
+                    const specEl = document.getElementById(`lhSpec-${id}`);
+                    if (specEl) productFinalPrice = parseFloat(specEl.value) || 0;
+                } else if (type === 'poster') {
+                    const price = parseFloat(document.getElementById(`posterPrice-${id}`).value) || 0;
+                    const qty = parseInt(document.getElementById(`posterQty-${id}`).value) || 1;
+                    productFinalPrice = price * qty;
+                } else if (type === 'seal') {
+                    const price = parseFloat(document.getElementById(`sealType-${id}`).value) || 0;
+                    const qty = parseInt(document.getElementById(`sealQty-${id}`).value) || 1;
+                    productFinalPrice = price * qty;
+                } else if (type === 'pamphlet') {
+                    const qty = parseInt(document.getElementById(`pamphletQty-${id}`).value) || 0;
+                    const size = parseInt(document.getElementById(`pamphletSize-${id}`).value);
+                    const paperRate = parseFloat(document.getElementById(`pamphletPaper-${id}`).value);
+                    const sides = parseInt(document.getElementById(`pamphletSides-${id}`).value);
+
+                    const demieSheets = (qty / size);
+                    const paperCost = demieSheets * paperRate;
+                    
+                    let printingCost = 0;
+                    if (demieSheets > 0) {
+                        const thousandsBlocks = Math.ceil(demieSheets / 1000);
+                        if (sides === 1) {
+                            printingCost = 2000 + Math.max(0, thousandsBlocks - 1) * 350;
+                        } else { // Double side
+                            printingCost = 2000 + Math.max(0, thousandsBlocks - 1) * 1400; // Assuming 2000 for first 1000, then 1400 for next
+                        }
+                    }
+                    
+                    const totalProductionCost = paperCost + printingCost;
+                    const marginPercent = parseFloat(elements.margin.value) || 0;
+                    const marginAmount = totalProductionCost * (marginPercent / 100);
+                    productFinalPrice = totalProductionCost + marginAmount;
+                }
+                
+                const productTotalInput = document.getElementById(`productTotal-${id}`);
+                if (productTotalInput && !pricesUnlocked) {
+                    productTotalInput.value = productFinalPrice.toFixed(2);
+                }
+                if (productTotalInput) {
+                    runningTotal += parseFloat(productTotalInput.value) || 0;
+                }
+            });
+
+            grandTotal = runningTotal;
+            if (!isTotalEditable) {
+                elements.totalPrice.textContent = `₹${grandTotal.toFixed(2)}`;
+            }
+            calculateBalance();
+        }
+
+        function calculateBalance() {
+            let currentTotal = grandTotal;
+            if(isTotalEditable) {
+                const manualTotalEl = document.getElementById('manualTotalInput');
+                if(manualTotalEl) currentTotal = parseFloat(manualTotalEl.value) || 0;
+            } else {
+                 let totalFromProducts = 0;
+                document.querySelectorAll('.product-total-input').forEach(input => {
+                    totalFromProducts += parseFloat(input.value) || 0;
+                });
+                currentTotal = totalFromProducts;
+            }
+            
+            elements.totalPrice.textContent = `₹${currentTotal.toFixed(2)}`;
+            const advance = parseFloat(elements.advanceAmount.value) || 0;
+            const balance = currentTotal - advance;
+            elements.balanceAmount.textContent = `₹${balance.toFixed(2)}`;
+        }
+
+        // --- UI & EVENT HANDLING ---
+        function addProduct() {
+            productCounter++;
+            const productEl = document.createElement('div');
+            productEl.innerHTML = createProductContainerHtml(productCounter);
+            elements.productList.appendChild(productEl.firstElementChild);
+            const newCard = document.querySelector(`.product-card[data-id='${productCounter}']`);
+            newCard.querySelector('.btn-remove').addEventListener('click', removeProduct);
+            newCard.querySelector('.product-type-selector').addEventListener('change', handleProductTypeChange);
+        }
+
+        function removeProduct(event) {
+            const id = event.target.dataset.id;
+            const productCard = document.querySelector(`.product-card[data-id='${id}']`);
+            if (productCard) { productCard.remove(); calculateAll(); }
+        }
+        
+        function handleMugChange(id) {
+            const mugType = document.getElementById(`mugType-${id}`).value;
+            const qty = parseInt(document.getElementById(`mugQty-${id}`).value) || 0;
+            const priceInput = document.getElementById(`mugPrice-${id}`);
+            const priceNote = document.getElementById(`mug-price-note-${id}`);
+            let price = 0;
+
+            priceInput.disabled = false;
+            priceNote.textContent = 'For quantities more than 1, please enter the price per item.';
+
+            if (mugType === 'White Sublimation Mug') {
+                if (qty >= 100) price = 110;
+                else if (qty >= 20) price = 150;
+                else if (qty >= 5) price = 200;
+                else if (qty >= 1) price = 250;
+                priceInput.disabled = true;
+                priceNote.textContent = 'Price is auto-calculated for this mug type.';
+            } else if (mugType === 'Black Base Mug') {
+                if (qty === 1) price = 300;
+            } else if (mugType === 'Magic Mug') {
+                if (qty === 1) price = 350;
+            } else if (mugType === '4 Set Tea Mug') {
+                if (qty === 1) price = 500;
+            } else if (mugType === 'Base Color Mug') {
+                if (qty === 1) price = 350;
+            }
+            
+            if (qty === 1 && mugType !== 'White Sublimation Mug') {
+                priceInput.disabled = true;
+                priceNote.textContent = 'Price is fixed for a single item. For more, enter price manually.';
+            }
+            
+            priceInput.value = price;
+            calculateAll();
+        }
+
+        function handlePosterChange(id) {
+            const spec = document.getElementById(`posterSpec-${id}`).value;
+            const qty = parseInt(document.getElementById(`posterQty-${id}`).value) || 0;
+            const priceInput = document.getElementById(`posterPrice-${id}`);
+            let price = 0;
+            const tiers = posterRates[spec];
+            if (tiers) {
+                if (spec === 'Sticker Sheet') {
+                    if (qty <= 5) price = tiers[5];
+                    else if (qty <= 20) price = tiers[20];
+                    else if (qty <= 50) price = tiers[50];
+                    else price = tiers[50];
+                } else {
+                    if (qty <= 10) price = tiers[10];
+                    else if (qty <= 20) price = tiers[20];
+                    else if (qty <= 200) price = tiers[200];
+                    else price = tiers[200];
+                }
+            }
+            priceInput.value = price || 0;
+            calculateAll();
+        }
+
+        function handleBindingTypeChange(id) {
+            const bindingType = document.getElementById(`bindingType-${id}`).value;
+            const container = document.getElementById(`glue-binding-price-container-${id}`);
+            if (bindingType === 'Glue Pad Binding') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+            calculateAll();
+        }
+
+        function handleProductTypeChange(event) {
+            const id = event.target.dataset.id;
+            const type = event.target.value;
+            const card = document.querySelector(`.product-card[data-id='${id}']`);
+            const formContainer = document.getElementById(`product-form-${id}`);
+            const titleEl = document.getElementById(`product-title-${id}`);
+            card.dataset.type = type;
+
+            if (type === 'billbook') {
+                titleEl.textContent = 'Bill Book Details';
+                formContainer.innerHTML = createBillBookHtml(id);
+                formContainer.querySelectorAll('.form-input, .form-select').forEach(el => { el.addEventListener('change', calculateAll); el.addEventListener('keyup', calculateAll); });
+                formContainer.querySelector(`#bindingType-${id}`).addEventListener('change', () => handleBindingTypeChange(id));
+                const numDuplicatesInput = formContainer.querySelector(`#numDuplicates-${id}`);
+                numDuplicatesInput.addEventListener('change', () => updateDuplicateInputs(id));
+                numDuplicatesInput.addEventListener('keyup', () => updateDuplicateInputs(id));
+                const printColorSelect = formContainer.querySelector(`#printColor-${id}`);
+                printColorSelect.addEventListener('change', () => updateColorInputs(id));
+                updateDuplicateInputs(id); updateColorInputs(id);
+            } else if (type === 'visitingcard') {
+                titleEl.textContent = 'Visiting Card Details';
+                formContainer.innerHTML = createVisitingCardHtml(id);
+                formContainer.querySelector('.vc-quantity-selector').addEventListener('change', () => updateVcSpecs(id));
+                formContainer.querySelector('.vc-spec-selector').addEventListener('change', calculateAll);
+                updateVcSpecs(id);
+            } else if (type === 'flex') {
+                titleEl.textContent = 'Flex / Banner Details';
+                formContainer.innerHTML = createFlexBannerHtml(id);
+                formContainer.querySelectorAll('.form-input, .form-select').forEach(el => { el.addEventListener('change', calculateAll); el.addEventListener('keyup', calculateAll); });
+            } else if (type === 'custom') {
+                titleEl.textContent = 'Customized Product';
+                formContainer.innerHTML = createCustomProductHtml(id);
+                formContainer.querySelectorAll('.form-input, .form-select').forEach(el => { el.addEventListener('change', calculateAll); el.addEventListener('keyup', calculateAll); });
+            } else if (type === 'mug') {
+                titleEl.textContent = 'Mug Printing';
+                formContainer.innerHTML = createMugHtml(id);
+                formContainer.querySelector(`#mugType-${id}`).addEventListener('change', () => handleMugChange(id));
+                formContainer.querySelector(`#mugQty-${id}`).addEventListener('keyup', () => handleMugChange(id));
+                formContainer.querySelector(`#mugQty-${id}`).addEventListener('change', () => handleMugChange(id));
+                formContainer.querySelector(`#mugPrice-${id}`).addEventListener('keyup', calculateAll);
+                handleMugChange(id);
+            } else if (type === 'letterhead') {
+                titleEl.textContent = 'Letter Head';
+                formContainer.innerHTML = createLetterHeadHtml(id);
+                formContainer.querySelector(`#lhSpec-${id}`).addEventListener('change', calculateAll);
+            } else if (type === 'poster') {
+                titleEl.textContent = 'Poster Printing';
+                formContainer.innerHTML = createPosterHtml(id);
+                formContainer.querySelector(`#posterSpec-${id}`).addEventListener('change', () => handlePosterChange(id));
+                formContainer.querySelector(`#posterQty-${id}`).addEventListener('keyup', () => handlePosterChange(id));
+                formContainer.querySelector(`#posterQty-${id}`).addEventListener('change', () => handlePosterChange(id));
+                handlePosterChange(id);
+            } else if (type === 'seal') {
+                titleEl.textContent = 'Seal / Stump';
+                formContainer.innerHTML = createSealHtml(id);
+                formContainer.querySelectorAll('.form-input, .form-select').forEach(el => { el.addEventListener('change', calculateAll); el.addEventListener('keyup', calculateAll); });
+            } else if (type === 'pamphlet') {
+                titleEl.textContent = 'Pamphlet';
+                formContainer.innerHTML = createPamphletHtml(id);
+                formContainer.querySelectorAll('.form-input, .form-select').forEach(el => { el.addEventListener('change', calculateAll); el.addEventListener('keyup', calculateAll); });
+            } else {
+                titleEl.textContent = '';
+                formContainer.innerHTML = '';
+            }
+            calculateAll();
+        }
+        
+        function updateDuplicateInputs(productId) { const container = document.getElementById(`duplicate-sections-${productId}`); const numDuplicates = parseInt(document.getElementById(`numDuplicates-${productId}`).value) || 0; container.innerHTML = ''; for (let i = 1; i <= numDuplicates; i++) container.innerHTML += createDuplicateHtml(productId, i); container.querySelectorAll('.dynamic-input').forEach(el => el.addEventListener('change', calculateAll)); calculateAll(); }
+        function updateColorInputs(productId) { const container = document.getElementById(`colorInputs-${productId}`); const type = document.getElementById(`printColor-${productId}`).value; container.innerHTML = ''; if (type === 'single') container.innerHTML = `<div class="input-group"><label for="color1-${productId}" class="input-label text-sm">Color Name</label><input type="text" id="color1-${productId}" class="form-input" placeholder="e.g., Blue"></div>`; else if (type === 'double') container.innerHTML = `<div class="grid grid-cols-2 gap-2"><div><label for="color1-${productId}" class="input-label text-sm">Color 1</label><input type="text" id="color1-${productId}" class="form-input" placeholder="e.g., Black"></div><div><label for="color2-${productId}" class="input-label text-sm">Color 2</label><input type="text" id="color2-${productId}" class="form-input" placeholder="e.g., Red"></div></div>`; container.querySelectorAll('.form-input').forEach(el => el.addEventListener('keyup', calculateAll)); }
+        function updateVcSpecs(id) { const quantity = document.getElementById(`vcQuantity-${id}`).value; const specDropdown = document.getElementById(`vcSpec-${id}`); specDropdown.innerHTML = ''; const specs = visitingCardRates[quantity]; if (specs) { for (const [spec, price] of Object.entries(specs)) { const option = document.createElement('option'); option.value = price; option.textContent = `${spec} - ₹${price}`; specDropdown.appendChild(option); } } calculateAll(); }
+        function toggleTotalEdit() { isTotalEditable = !isTotalEditable; if (isTotalEditable) { const currentTotal = grandTotal.toFixed(2); elements.totalPrice.innerHTML = `<input type="number" id="manualTotalInput" class="form-input editable-total text-right" value="${currentTotal}">`; document.getElementById('manualTotalInput').addEventListener('keyup', calculateBalance); document.getElementById('manualTotalInput').addEventListener('change', calculateBalance); } else { calculateAll(); } }
+        function toggleProductPrices() {
+            pricesUnlocked = !pricesUnlocked;
+            const priceInputs = document.querySelectorAll('.product-total-input');
+            priceInputs.forEach(input => input.disabled = !pricesUnlocked);
+            elements.togglePricesBtn.textContent = pricesUnlocked ? 'Lock & Recalculate Prices' : 'Unlock Product Prices';
+            if (!pricesUnlocked) {
+                calculateAll();
+            }
+        }
+
+        function printQuotation() {
+            const consumerName = elements.consumerName.value || 'N/A';
+            const consumerNumber = elements.consumerNumber.value || 'N/A';
+            const jobNumber = elements.jobNumber.value || 'N/A';
+            let finalTotal = 0;
+            document.querySelectorAll('.product-total-input').forEach(input => finalTotal += parseFloat(input.value) || 0);
+
+            if(isTotalEditable) { const manualInput = document.getElementById('manualTotalInput'); if(manualInput) finalTotal = parseFloat(manualInput.value) || 0; }
+            
+            const advanceAmount = parseFloat(elements.advanceAmount.value) || 0;
+            const balanceAmount = finalTotal - advanceAmount;
+            const today = new Date();
+            const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+            let productsHtml = '';
+            let priceBreakdownHtml = '';
+            const totalSheetCounts = {};
+            document.querySelectorAll('.product-card').forEach((card, index) => {
+                const id = card.dataset.id;
+                const type = card.dataset.type;
+                const productTotalInput = document.getElementById(`productTotal-${id}`);
+                if(!productTotalInput) return;
+                
+                const productPrice = parseFloat(productTotalInput.value).toFixed(2);
+                let productTitle = `Product ${index + 1}`;
+                
+                if (type === 'billbook') {
+                    productTitle += ": Bill Book";
+                    const bookSize = parseInt(document.getElementById(`bookSize-${id}`).value); const bookSizeText = document.getElementById(`bookSize-${id}`).options[document.getElementById(`bookSize-${id}`).selectedIndex].text; const numBooks = parseInt(document.getElementById(`numBooks-${id}`).value) || 0; const serialNo = document.getElementById(`serialNo-${id}`).value || 'N/A'; const bindingType = document.getElementById(`bindingType-${id}`).value; const originalPages = parseInt(document.getElementById(`originalPagesPerBook-${id}`).value) || 0; const originalPaperText = document.getElementById(`originalPaper-${id}`).options[document.getElementById(`originalPaper-${id}`).selectedIndex].text; let colorDetail = document.getElementById(`printColor-${id}`).options[document.getElementById(`printColor-${id}`).selectedIndex].text; if (colorDetail === 'Single Color') { const color1 = document.getElementById(`color1-${id}`)?.value; if (color1) colorDetail += ` (${color1})`; } else if (colorDetail === 'Double Color') { const color1 = document.getElementById(`color1-${id}`)?.value; const color2 = document.getElementById(`color2-${id}`)?.value; let colors = [color1, color2].filter(c => c).join(', '); if (colors) colorDetail += ` (${colors})`;} const numDuplicates = parseInt(document.getElementById(`numDuplicates-${id}`).value) || 0; const duplicatePages = parseInt(document.getElementById(`duplicatePagesPerBook-${id}`).value) || 0; const originalDemieSheets = (numBooks * originalPages) / bookSize; if(originalDemieSheets > 0) totalSheetCounts[originalPaperText] = (totalSheetCounts[originalPaperText] || 0) + originalDemieSheets; let duplicatesHtml = ''; for (let i = 1; i <= numDuplicates; i++) { const paperEl = document.getElementById(`duplicatePaper-${id}-${i}`); const printEl = document.getElementById(`printDuplicate-${id}-${i}`); const paperText = paperEl ? paperEl.options[paperEl.selectedIndex].text : 'N/A'; const isPrinted = printEl && printEl.checked ? 'Yes' : 'No'; const duplicateDemieSheets = (numBooks * duplicatePages) / bookSize; if(duplicateDemieSheets > 0) totalSheetCounts[paperText] = (totalSheetCounts[paperText] || 0) + duplicateDemieSheets; duplicatesHtml += `<tr><td>Duplicate ${i}</td><td>${duplicatePages} pgs/book</td><td>${paperText}</td><td>${isPrinted}</td></tr>`; }
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Item</th><th>Spec</th><th>Paper</th><th>Printed</th></tr><tr><td>Original</td><td>${originalPages} pgs/book</td><td>${originalPaperText}</td><td>Yes</td></tr>${duplicatesHtml}<tr><td colspan="4" style="padding: 2px;"></td></tr><tr><th>Qty</th><td>${numBooks} Books</td><th>Size</th><td>${bookSizeText}</td></tr><tr><th>S/N From</th><td>${serialNo}</td><th>Binding</th><td>${bindingType}</td></tr><tr><th>Color</th><td colspan="3">${colorDetail}</td></tr></table>`;
+                } else if (type === 'visitingcard') {
+                    productTitle += ": Visiting Card";
+                    const quantity = document.getElementById(`vcQuantity-${id}`).value; const specEl = document.getElementById(`vcSpec-${id}`); const specText = specEl.options[specEl.selectedIndex].textContent;
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Quantity</th><td>${quantity}</td></tr><tr><th>Specification</th><td>${specText.split(' - ')[0]}</td></tr></table>`;
+                } else if (type === 'flex') {
+                    productTitle += ": Flex / Banner";
+                    const flexType = document.getElementById(`flexType-${id}`).value; const width = document.getElementById(`flexWidth-${id}`).value; const height = document.getElementById(`flexHeight-${id}`).value; const qty = document.getElementById(`flexQty-${id}`).value; const orientation = document.getElementById(`flexOrientation-${id}`).value;
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Type</th><td colspan="3">${flexType}</td></tr><tr><th>Size</th><td>${width} ft x ${height} ft</td><th>Orientation</th><td>${orientation}</td></tr><tr><th>Quantity</th><td colspan="3">${qty}</td></tr></table>`;
+                } else if (type === 'custom') {
+                    const desc = document.getElementById(`customDesc-${id}`).value.replace(/\n/g, '<br>');
+                    const qty = document.getElementById(`customQty-${id}`).value;
+                    productTitle = `Product ${index + 1}: Custom`;
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Description</th><td>${desc}</td></tr><tr><th>Quantity</th><td>${qty}</td></tr></table>`;
+                } else if (type === 'mug') {
+                    productTitle += ": Mug";
+                    const mugType = document.getElementById(`mugType-${id}`).value;
+                    const qty = document.getElementById(`mugQty-${id}`).value;
+                    const pricePerItem = (parseFloat(productPrice) / (parseInt(qty) || 1)).toFixed(2);
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Type</th><td>${mugType}</td></tr><tr><th>Quantity</th><td>${qty}</td></tr><tr><th>Price per Item</th><td>₹${pricePerItem}</td></tr></table>`;
+                } else if (type === 'letterhead') {
+                    productTitle += ": Letter Head";
+                    const specEl = document.getElementById(`lhSpec-${id}`);
+                    const specText = specEl.options[specEl.selectedIndex].textContent;
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Specification</th><td>${specText}</td></tr></table>`;
+                } else if (type === 'poster') {
+                    productTitle += ": Poster";
+                    const spec = document.getElementById(`posterSpec-${id}`).value;
+                    const qty = document.getElementById(`posterQty-${id}`).value;
+                    const pricePerItem = (parseFloat(productPrice) / (parseInt(qty) || 1)).toFixed(2);
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Paper</th><td>${spec}</td></tr><tr><th>Quantity</th><td>${qty}</td></tr><tr><th>Price per Item</th><td>₹${pricePerItem}</td></tr></table>`;
+                } else if (type === 'seal') {
+                    productTitle += ": Seal / Stump";
+                    const sealType = document.getElementById(`sealType-${id}`).options[document.getElementById(`sealType-${id}`).selectedIndex].text;
+                    const qty = document.getElementById(`sealQty-${id}`).value;
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Type</th><td>${sealType}</td></tr><tr><th>Quantity</th><td>${qty}</td></tr></table>`;
+                } else if (type === 'pamphlet') {
+                    productTitle += ": Pamphlet";
+                    const qty = document.getElementById(`pamphletQty-${id}`).value;
+                    const size = document.getElementById(`pamphletSize-${id}`).options[document.getElementById(`pamphletSize-${id}`).selectedIndex].text;
+                    const paper = document.getElementById(`pamphletPaper-${id}`).options[document.getElementById(`pamphletPaper-${id}`).selectedIndex].text;
+                    const sides = document.getElementById(`pamphletSides-${id}`).options[document.getElementById(`pamphletSides-${id}`).selectedIndex].text;
+                    productsHtml += `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">${productTitle}</h3><table class="details-table"><tr><th>Quantity</th><td>${qty}</td><th>Size</th><td>${size}</td></tr><tr><th>Paper</th><td>${paper}</td><th>Printing</th><td>${sides}</td></tr></table>`;
+                }
+                if (type !== 'none') {
+                    priceBreakdownHtml += `<tr><td style="text-align: right;">${productTitle}:</td><td style="text-align: right; width: 100px;">₹${productPrice}</td></tr>`;
+                }
+            });
+            
+            let sheetsHtml = '';
+            const sheetItems = [];
+            for(const paper in totalSheetCounts) { if(totalSheetCounts[paper] > 0) sheetItems.push(`${paper}: ${Math.ceil(totalSheetCounts[paper])}`); }
+            if(sheetItems.length > 0) { sheetsHtml = `<h3 style="margin-top: 15px; margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Total Sheets Required (Bill Books)</h3><p style="font-size: 9pt;">${sheetItems.join(', ')}</p>`; }
+
+            const printContent = `
+                <html><head><title>Job Slip - AR Printers</title><style>
+                    @page { size: A5; margin: 1cm; } body { font-family: Arial, sans-serif; color: #333; font-size: 10pt; display: flex; flex-direction: column; height: 90%; }
+                    .header { text-align: center; margin-bottom: 15px; } .header h1 { margin: 0; font-size: 16pt; }
+                    .header p { margin: 0; font-size: 9pt; color: #555; } .header h2 { margin: 5px 0; font-size: 12pt; }
+                    .details-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    .details-table th, .details-table td { text-align: left; padding: 5px; border: 1px solid #ccc; font-size: 9pt; }
+                    .details-table th { background-color: #f2f2f2; font-weight: 600; }
+                    .totals-section { margin-top: 15px; padding-top: 10px; border-top: 2px solid #333; }
+                    .totals-section table { width: 100%; } .totals-section td { padding: 4px; font-size: 11pt; }
+                    .footer { text-align: left; margin-top: auto; font-size: 7pt; color: #555; border-top: 1px solid #ccc; padding-top: 5px; }
+                    .footer p { margin: 0 0 5px 0; }
+                    .signature-section { margin-top: 40px; text-align: right; font-size: 10pt; }
+                </style></head><body>
+                    <div class="header"><h1>AR PRINTERS</h1><p>Raipur, Chhattisgarh</p><h2>Estimate / Quotation</h2></div>
+                    <table class="details-table"><tr><th>Job No:</th><td>${jobNumber}</td><th>Date:</th><td>${formattedDate}</td></tr><tr><th>Client:</th><td>${consumerName}</td><th>Contact:</th><td>${consumerNumber}</td></tr></table>
+                    <div style="flex-grow: 1;">
+                        ${productsHtml} ${sheetsHtml}
+                    </div>
+                    <div class="totals-section"><table>
+                        ${priceBreakdownHtml}
+                        <tr><td style="text-align: right; font-weight: bold; border-top: 1px solid #ccc; padding-top: 8px;">Grand Total:</td><td style="text-align: right; font-weight: bold; width: 100px; border-top: 1px solid #ccc; padding-top: 8px;">&nbsp;₹${finalTotal.toFixed(2)}</td></tr>
+                        <tr><td style="text-align: right;">Advance:</td><td style="text-align: right;">&nbsp;₹${advanceAmount.toFixed(2)}</td></tr>
+                        <tr><td style="text-align: right; font-weight: bold;">Balance Due:</td><td style="text-align: right; font-weight: bold;">&nbsp;₹${balanceAmount.toFixed(2)}</td></tr>
+                    </table></div>
+                    <div class="signature-section">
+                        <p style="margin-bottom: 20px;">For AR PRINTERS</p>
+                        <p>(Signature & Seal)</p>
+                    </div>
+                    <div class="footer">
+                        <p style="font-weight: bold; margin-bottom: 5px;">Remarks:</p>
+                        <p>This is a prediction of the amount, not a final bill.</p>
+                        <p>The final bill will be provided at the time of delivery.</p>
+                        <p>GST will be added to the final amount according to the HSN code.</p>
+                        <p>All customized products require a natural production time of at least 2-3 days.</p>
+                    </div>
+                </body></html>`;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            elements.addProductBtn.addEventListener('click', addProduct);
+            elements.btnPrint.addEventListener('click', printQuotation);
+            elements.margin.addEventListener('change', calculateAll);
+            elements.margin.addEventListener('keyup', calculateAll);
+            elements.advanceAmount.addEventListener('change', calculateBalance);
+            elements.advanceAmount.addEventListener('keyup', calculateBalance);
+            elements.editTotalBtn.addEventListener('click', toggleTotalEdit);
+            elements.togglePricesBtn.addEventListener('click', toggleProductPrices);
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            elements.jobNumber.value = `${year}-${hours}${minutes}${seconds}`;
+            
+            addProduct(); // Add the first product card on load
+        });
+    </script>
+</body>
+</html>
